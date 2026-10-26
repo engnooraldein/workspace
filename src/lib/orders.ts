@@ -169,13 +169,17 @@ export async function updateOrderStatus(
       where: { id: updated.tenantId },
       select: { name: true, slug: true },
     });
-    void sendOrderPushNotification(updated.id, {
-      title: `🔔 طلبك جاهز للاستلام! (#${updated.number})`,
-      body: `تفضل إلى الكاونتر لاستلام طلبك من ${tenant?.name ?? "المطعم"}`,
-      status: "READY",
-      url: buildTrackingUrl(tenant?.slug ?? "", updated.publicToken),
-      tag: `order-${updated.publicToken}`,
-    });
+    try {
+      await sendOrderPushNotification(updated.id, {
+        title: `🔔 طلبك جاهز للاستلام! (#${updated.number})`,
+        body: `تفضل إلى الكاونتر لاستلام طلبك من ${tenant?.name ?? "المطعم"}`,
+        status: "READY",
+        url: buildTrackingUrl(tenant?.slug ?? "", updated.publicToken),
+        tag: `order-${updated.publicToken}`,
+      });
+    } catch (pushErr) {
+      console.error("[orders] Push notification error:", pushErr);
+    }
   }
 
   return { ok: true, order: updated };

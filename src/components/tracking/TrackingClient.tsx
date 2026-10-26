@@ -82,11 +82,16 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
     }
   }
 
-  // Auto-unlock audio and vibration on first customer interaction
+  // Auto-unlock audio, vibration, and trigger permission on first customer touch
   useEffect(() => {
     const handleFirstTouch = () => {
       void buzzer.unlock();
       setSoundOn(true);
+      if (typeof window !== "undefined" && "Notification" in window) {
+        if (Notification.permission === "default") {
+          void handleActivateBuzzer();
+        }
+      }
     };
     window.addEventListener("touchstart", handleFirstTouch, { once: true });
     window.addEventListener("click", handleFirstTouch, { once: true });
@@ -139,20 +144,20 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
 
       {/* ----------------- High-Priority Buzzer & Lock-Screen Activation Card */}
       {!push.subscribed && order.status !== "COMPLETED" ? (
-        <section className="sb-card sb-fade-up border-2 border-cyan-400 bg-gradient-to-br from-cyan-950/60 via-[var(--surface)] to-[var(--surface-2)] p-5 shadow-2xl text-center space-y-3">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/20 text-3xl animate-bounce">
+        <section className="sb-card sb-fade-up border-2 border-emerald-400 bg-gradient-to-br from-emerald-950/70 via-[var(--surface)] to-[var(--surface-2)] p-5 shadow-2xl text-center space-y-3">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400/20 text-3xl animate-bounce">
             🔔
           </div>
           <div>
             <h3 className="text-base font-black text-white">
               {lang === "ar"
-                ? "فعّل جرس النداء واهتزاز الهاتف"
+                ? "تفعيل جرس واهتزاز الهاتف عند جهوزية الوجبة"
                 : "Enable Buzzer & Phone Vibration"}
             </h3>
-            <p className="mt-1 text-xs text-cyan-200/80 leading-relaxed max-w-sm mx-auto">
+            <p className="mt-1 text-xs text-emerald-200/90 leading-relaxed max-w-sm mx-auto">
               {lang === "ar"
-                ? "ضروري جداً لتنبيهك برنين واهتزاز مباشر على شاشة القفل فور جاهزية طلبك، حتى لو أغلقت الشاشة أو تركت المتصفح!"
-                : "Essential to alert you with vibration & lock-screen ring when your order is ready, even if you exit or lock your phone!"}
+                ? "اضغط قبول بالأسفل ليصلك رنين واهتزاز مباشر فور جهوزية طلبك، حتى لو أغلقت الشاشة أو تركت المتصفح."
+                : "Tap accept below to receive vibration & ring when ready, even if you lock your phone or leave the browser."}
             </p>
           </div>
 
@@ -160,13 +165,13 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
             type="button"
             onClick={handleActivateBuzzer}
             disabled={push.subscribing}
-            className="sb-btn sb-btn-primary w-full !py-3 text-sm font-black shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
+            className="sb-btn sb-btn-primary w-full !py-3.5 text-sm font-black shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2"
           >
-            <span className="text-lg">📲</span>
+            <span className="text-lg">✅</span>
             <span>
               {push.subscribing
                 ? t["common.loading"]
-                : (lang === "ar" ? "اضغط هنا لتفعيل الجرس والاهتزاز الآن" : "Tap here to enable Buzzer & Vibration")}
+                : (lang === "ar" ? "قبول وتفعيل التنبيه الآن" : "Accept & Enable Alert Now")}
             </span>
           </button>
         </section>
@@ -175,16 +180,16 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
           <span className="flex items-center gap-2">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             {lang === "ar"
-              ? "تنبيهات شاشة القفل والاهتزاز مفعّلة — سيهتز هاتفك فور جهوزية الطلب 🔔"
-              : "Lock-screen alerts active — Your phone will vibrate & ring when ready 🔔"}
+              ? "✅ التنبيه مفعّل بنجاح — سيهتز هاتفك فور جهوزية الطلب، يمكنك قفل الشاشة الآن 🔔"
+              : "✅ Alert active — Your phone will vibrate & ring when ready, you can lock the screen now 🔔"}
           </span>
           <button
             type="button"
             onClick={() => void push.notifyReady()}
-            className="text-[10px] text-emerald-200 underline font-bold"
+            className="text-[10px] text-emerald-200 underline font-bold whitespace-nowrap"
             title="تجربة التنبيه"
           >
-            {lang === "ar" ? "تجربة الإشعار" : "Test Alert"}
+            {lang === "ar" ? "تجربة الرنين" : "Test Ring"}
           </button>
         </div>
       )}
