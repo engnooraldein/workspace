@@ -178,35 +178,51 @@ export function useBuzzerAlert(enabled: boolean) {
   }, []);
 
   const start = useCallback(() => {
-    const context = contextRef.current;
-    const gain = gainRef.current;
-    if (!context || !gain) return;
-
-    const pulse = () => {
-      const now = context.currentTime;
-      highRef.current = !highRef.current;
-
-      if (oscillatorRef.current) {
-        oscillatorRef.current.frequency.setValueAtTime(highRef.current ? 1175 : 784, now);
-      }
-
-      gain.gain.cancelScheduledValues(now);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.05);
-      gain.gain.setValueAtTime(0.22, now + 0.22);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
-    };
-
-    pulse();
-    if (ringTimerRef.current) clearInterval(ringTimerRef.current);
-    ringTimerRef.current = setInterval(pulse, 800);
-
+    // 1. Always trigger continuous buzzer vibration pattern on mobile devices
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      const buzz = () => navigator.vibrate([320, 140, 320, 140, 620]);
+      const buzz = () => {
+        try {
+          navigator.vibrate([400, 150, 400, 150, 800]);
+        } catch {
+          /* ignore */
+        }
+      };
       buzz();
       if (vibrateTimerRef.current) clearInterval(vibrateTimerRef.current);
-      vibrateTimerRef.current = setInterval(buzz, 2600);
+      vibrateTimerRef.current = setInterval(buzz, 2500);
     }
+
+    // 2. Play two-tone buzzer sound
+    const playAudio = () => {
+      const context = contextRef.current;
+      const gain = gainRef.current;
+      if (!context || !gain) return;
+
+      if (context.state === "suspended") {
+        void context.resume();
+      }
+
+      const pulse = () => {
+        const now = context.currentTime;
+        highRef.current = !highRef.current;
+
+        if (oscillatorRef.current) {
+          oscillatorRef.current.frequency.setValueAtTime(highRef.current ? 1175 : 784, now);
+        }
+
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.28, now + 0.05);
+        gain.gain.setValueAtTime(0.28, now + 0.22);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+      };
+
+      pulse();
+      if (ringTimerRef.current) clearInterval(ringTimerRef.current);
+      ringTimerRef.current = setInterval(pulse, 800);
+    };
+
+    playAudio();
   }, []);
 
   useEffect(() => {

@@ -82,6 +82,39 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
     }
   }
 
+  // Auto-unlock audio and vibration on first customer interaction
+  useEffect(() => {
+    const handleFirstTouch = () => {
+      void buzzer.unlock();
+      setSoundOn(true);
+    };
+    window.addEventListener("touchstart", handleFirstTouch, { once: true });
+    window.addEventListener("click", handleFirstTouch, { once: true });
+    return () => {
+      window.removeEventListener("touchstart", handleFirstTouch);
+      window.removeEventListener("click", handleFirstTouch);
+    };
+  }, [buzzer]);
+
+  async function handleActivateBuzzer() {
+    await enableSound();
+    await push.enableNotifications();
+
+    // Prevent phone screen from sleeping while waiting
+    try {
+      if ("wakeLock" in navigator) {
+        await (navigator as unknown as { wakeLock: { request: (type: string) => Promise<unknown> } }).wakeLock.request("screen");
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // Confirmation vibration
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate([150, 70, 150]);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* ------------------------------------------------------- order card */}
@@ -104,53 +137,51 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
         ) : null}
       </section>
 
-      {/* ----------------- Lock-Screen Push Notifications (Talabat / Delivery Style) */}
-      {!push.subscribed ? (
-        <section className="sb-card sb-fade-up border-[var(--brand-primary)]/40 bg-gradient-to-r from-sky-950/40 via-[var(--surface)] to-[var(--surface-2)] p-4 shadow-xl">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-start">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl flex-none">📲</span>
-              <div>
-                <h3 className="text-sm font-black text-white">
-                  {lang === "ar"
-                    ? "تنبيهات شاشة القفل (مثل تطبيق طلبات)"
-                    : "Lock-Screen Notifications (App-like)"}
-                </h3>
-                <p className="text-xs text-[var(--muted)] leading-relaxed">
-                  {lang === "ar"
-                    ? "فعّل التنبيهات لتصلك رسالة واهتزاز مباشر فور جاهزية طلبك، حتى لو قفلت الشاشة أو خرجت من المتصفح!"
-                    : "Receive instant notifications with vibration when your order is ready, even if you close the browser or lock your phone!"}
-                </p>
-              </div>
-            </div>
+      {/* ----------------- High-Priority Buzzer & Lock-Screen Activation Card */}
+      {!push.subscribed && order.status !== "COMPLETED" ? (
+        <section className="sb-card sb-fade-up border-2 border-cyan-400 bg-gradient-to-br from-cyan-950/60 via-[var(--surface)] to-[var(--surface-2)] p-5 shadow-2xl text-center space-y-3">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/20 text-3xl animate-bounce">
+            🔔
+          </div>
+          <div>
+            <h3 className="text-base font-black text-white">
+              {lang === "ar"
+                ? "فعّل جرس النداء واهتزاز الهاتف"
+                : "Enable Buzzer & Phone Vibration"}
+            </h3>
+            <p className="mt-1 text-xs text-cyan-200/80 leading-relaxed max-w-sm mx-auto">
+              {lang === "ar"
+                ? "ضروري جداً لتنبيهك برنين واهتزاز مباشر على شاشة القفل فور جاهزية طلبك، حتى لو أغلقت الشاشة أو تركت المتصفح!"
+                : "Essential to alert you with vibration & lock-screen ring when your order is ready, even if you exit or lock your phone!"}
+            </p>
+          </div>
 
-            <button
-              type="button"
-              onClick={async () => {
-                await enableSound();
-                await push.enableNotifications();
-              }}
-              disabled={push.subscribing}
-              className="sb-btn sb-btn-primary whitespace-nowrap !py-2 !px-4 text-xs font-black w-full sm:w-auto shadow-lg shadow-cyan-500/20"
-            >
+          <button
+            type="button"
+            onClick={handleActivateBuzzer}
+            disabled={push.subscribing}
+            className="sb-btn sb-btn-primary w-full !py-3 text-sm font-black shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
+          >
+            <span className="text-lg">📲</span>
+            <span>
               {push.subscribing
                 ? t["common.loading"]
-                : (lang === "ar" ? "🔔 تفعيل إشعارات شاشة القفل" : "🔔 Enable Lock-Screen Alerts")}
-            </button>
-          </div>
+                : (lang === "ar" ? "اضغط هنا لتفعيل الجرس والاهتزاز الآن" : "Tap here to enable Buzzer & Vibration")}
+            </span>
+          </button>
         </section>
       ) : (
         <div className="flex items-center justify-between gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs font-bold text-emerald-300">
           <span className="flex items-center gap-2">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             {lang === "ar"
-              ? "تنبيهات شاشة القفل مفعّلة — ستصلك رسالة فور جهوزية الطلب حتى لو أغلقت الشاشة"
-              : "Lock-screen alerts active — You will be notified even if screen is locked"}
+              ? "تنبيهات شاشة القفل والاهتزاز مفعّلة — سيهتز هاتفك فور جهوزية الطلب 🔔"
+              : "Lock-screen alerts active — Your phone will vibrate & ring when ready 🔔"}
           </span>
           <button
             type="button"
             onClick={() => void push.notifyReady()}
-            className="text-[10px] text-emerald-200 underline"
+            className="text-[10px] text-emerald-200 underline font-bold"
             title="تجربة التنبيه"
           >
             {lang === "ar" ? "تجربة الإشعار" : "Test Alert"}
