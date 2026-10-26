@@ -142,19 +142,57 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
         ) : null}
       </section>
 
-      {/* ----------------- High-Priority Buzzer & Lock-Screen Activation Card */}
-      {!push.subscribed && order.status !== "COMPLETED" ? (
-        <section className="sb-card sb-fade-up border-2 border-emerald-400 bg-gradient-to-br from-emerald-950/70 via-[var(--surface)] to-[var(--surface-2)] p-5 shadow-2xl text-center space-y-3">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400/20 text-3xl animate-bounce">
+      {/* ----------------- Active Buzzer Connection Status (Unmistakable Pager UI) */}
+      {(push.subscribed || push.permission === "granted") && order.status !== "COMPLETED" ? (
+        <section className="sb-card border-2 border-emerald-400 bg-gradient-to-r from-emerald-950/80 via-[var(--surface)] to-emerald-950/60 p-4 shadow-xl text-start">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-5 w-5 flex-none items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" />
+              </span>
+              <div>
+                <p className="text-sm font-black text-emerald-300 flex items-center gap-1.5">
+                  <span>🟢</span>
+                  <span>{lang === "ar" ? "جرس الهاتف: مفعّل وجاهز للتنبيه!" : "Phone Buzzer: Active & Ready!"}</span>
+                </p>
+                <p className="text-xs text-emerald-100/85 mt-0.5">
+                  {lang === "ar"
+                    ? "هاتفك مربوط بالطلب — سيهتز ويرن فور جهوزية الوجبة حتى لو أغلقت الشاشة."
+                    : "Your phone is connected — will ring & vibrate when ready even if locked."}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await enableSound();
+                void push.notifyReady();
+                if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+                  navigator.vibrate([350, 150, 350]);
+                }
+              }}
+              className="sb-btn sb-btn-primary flex-none whitespace-nowrap w-full sm:w-auto !py-2 !px-4 text-xs font-black shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+              title="تجربة رنين واهتزاز الهاتف"
+            >
+              <span>📳</span>
+              <span>{lang === "ar" ? "اضغط لتجربة الرنين والتأكد" : "Test Ring & Vibrate"}</span>
+            </button>
+          </div>
+        </section>
+      ) : order.status !== "COMPLETED" ? (
+        <section className="sb-card sb-fade-up border-2 border-amber-500 bg-gradient-to-br from-amber-950/70 via-[var(--surface)] to-amber-950/40 p-5 shadow-2xl text-center space-y-3">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/20 text-3xl animate-bounce">
             🔔
           </div>
           <div>
             <h3 className="text-base font-black text-white">
               {lang === "ar"
-                ? "تفعيل جرس واهتزاز الهاتف عند جهوزية الوجبة"
-                : "Enable Buzzer & Phone Vibration"}
+                ? "⚠️ جرس الهاتف غير مفعّل بعد"
+                : "⚠️ Phone Buzzer Not Active"}
             </h3>
-            <p className="mt-1 text-xs text-emerald-200/90 leading-relaxed max-w-sm mx-auto">
+            <p className="mt-1 text-xs text-amber-200/90 leading-relaxed max-w-sm mx-auto">
               {lang === "ar"
                 ? "اضغط قبول بالأسفل ليصلك رنين واهتزاز مباشر فور جهوزية طلبك، حتى لو أغلقت الشاشة أو تركت المتصفح."
                 : "Tap accept below to receive vibration & ring when ready, even if you lock your phone or leave the browser."}
@@ -165,7 +203,7 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
             type="button"
             onClick={handleActivateBuzzer}
             disabled={push.subscribing}
-            className="sb-btn sb-btn-primary w-full !py-3.5 text-sm font-black shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2"
+            className="sb-btn sb-btn-primary w-full !py-3.5 text-sm font-black shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2"
           >
             <span className="text-lg">✅</span>
             <span>
@@ -175,24 +213,7 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
             </span>
           </button>
         </section>
-      ) : (
-        <div className="flex items-center justify-between gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs font-bold text-emerald-300">
-          <span className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            {lang === "ar"
-              ? "✅ التنبيه مفعّل بنجاح — سيهتز هاتفك فور جهوزية الطلب، يمكنك قفل الشاشة الآن 🔔"
-              : "✅ Alert active — Your phone will vibrate & ring when ready, you can lock the screen now 🔔"}
-          </span>
-          <button
-            type="button"
-            onClick={() => void push.notifyReady()}
-            className="text-[10px] text-emerald-200 underline font-bold whitespace-nowrap"
-            title="تجربة التنبيه"
-          >
-            {lang === "ar" ? "تجربة الرنين" : "Test Ring"}
-          </button>
-        </div>
-      )}
+      ) : null}
 
       {/* ---------------------------------------------------- sound fallback toggle */}
       {!soundOn ? (

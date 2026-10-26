@@ -20,15 +20,50 @@ export function usePushNotifications(token: string, orderNumber: number, restaur
   const [subscribing, setSubscribing] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
+  const registerWithBackend = useCallback(async (): Promise<boolean> => {
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      await navigator.serviceWorker.ready;
+
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (vapidPublicKey && registration.pushManager) {
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+          });
+        }
+
+        const res = await fetch(`/api/public/orders/${token}/push-subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(subscription),
+        });
+
+        if (res.ok) {
+          setSubscribed(true);
+          return true;
+        }
+      }
+      setSubscribed(true);
+      return true;
+    } catch (err) {
+      console.warn("Push subscription sync:", err);
+      setSubscribed(true);
+      return false;
+    }
+  }, [token]);
+
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator) {
       setSupported(true);
       setPermission(Notification.permission);
       if (Notification.permission === "granted") {
-        setSubscribed(true);
+        void registerWithBackend();
       }
     }
-  }, []);
+  }, [registerWithBackend]);
 
   const enableNotifications = useCallback(async (): Promise<boolean> => {
     if (!supported) return false;
@@ -44,43 +79,25 @@ export function usePushNotifications(token: string, orderNumber: number, restaur
         return false;
       }
 
-      // 2. Register Service Worker
-      const registration = await navigator.serviceWorker.register("/sw.js", {
-        scope: "/",
-      });
-      await navigator.serviceWorker.ready;
+      // 2. Register & sync subscription with backend
+      await registerWithBackend();
 
-      // 3. Subscribe to Web Push
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (vapidPublicKey && registration.pushManager) {
-        try {
-          const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-          });
-
-          // 4. Send subscription to our backend
-          await fetch(`/api/public/orders/${token}/push-subscribe`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(subscription),
-          });
-        } catch (pushErr) {
-          console.warn("PushManager subscribe warning (local notifications will still work):", pushErr);
-        }
-      }
-
-      // 5. Fire immediate confirmation notification (like Talabat live tracking)
+      // 3. Fire immediate confirmation test notification
+      const registration = await navigator.serviceWorker.ready;
       const initialOptions: NotificationOptions & Record<string, unknown> = {
-        body: `تم تفعيل التنبيهات بنجاح 🔔 طلبك قيد التحضير وسنرسل لك إشعاراً فور جهوزه!`,
+        body: `تم تفعيل جرس التنبيه بنجاح 🔔 طلبك قيد التحضير وسنرسل لك رنيناً فور جهوزه!`,
         icon: "/icon.svg",
         badge: "/icon.svg",
         tag: `order-${token}`,
         renotify: true,
-        vibrate: [200, 100, 200],
+        vibrate: [300, 150, 300],
         data: { url: window.location.href },
       };
       await registration.showNotification(`${restaurantName} — طلب #${orderNumber}`, initialOptions as NotificationOptions);
+
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
 
       setSubscribed(true);
       return true;
@@ -90,7 +107,7 @@ export function usePushNotifications(token: string, orderNumber: number, restaur
     } finally {
       setSubscribing(false);
     }
-  }, [supported, token, orderNumber, restaurantName]);
+  }, [supported, registerWithBackend, token, orderNumber, restaurantName]);
 
   // Trigger local notification via Service Worker if status changes to READY
   const notifyReady = useCallback(async () => {
