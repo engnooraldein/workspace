@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import QRCode from "qrcode";
 
 import { dict, type Lang } from "@/lib/i18n";
 import { formatElapsed, formatMoney } from "@/lib/format";
@@ -35,8 +36,26 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [issued, setIssued] = useState<{ token: string; number: number } | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [rebuzzingId, setRebuzzingId] = useState<string | null>(null);
   const [rebuzzSuccessId, setRebuzzSuccessId] = useState<string | null>(null);
+
+  // Generate QR code client-side using the exact browser origin
+  useEffect(() => {
+    if (!issued) {
+      setQrDataUrl(null);
+      return;
+    }
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const fullTrackingUrl = `${origin}/${slug}/track?order=${issued.token}`;
+    QRCode.toDataURL(fullTrackingUrl, {
+      width: 512,
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then((dataUrl) => setQrDataUrl(dataUrl))
+      .catch((err) => console.error("Client QR generation error:", err));
+  }, [issued, slug]);
 
   const [now, setNow] = useState(() => new Date());
   const numberRef = useRef<HTMLInputElement>(null);
@@ -343,9 +362,9 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
           </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/public/qr/${issued.token}`}
+            src={qrDataUrl || `/api/public/qr/${issued.token}?t=${issued.token}`}
             alt="QR"
-            className="mx-auto mt-3 h-44 w-44 rounded-xl bg-white p-2"
+            className="mx-auto mt-3 h-44 w-44 rounded-xl bg-white p-2 shadow-lg"
           />
           <p className="mt-3 break-all font-mono text-[0.65rem] text-[var(--muted)]">
             {`${typeof window !== "undefined" ? window.location.origin : ""}/${slug}/track?order=${issued.token}`}

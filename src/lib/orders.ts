@@ -34,8 +34,27 @@ export function businessDateKey(date: Date = new Date()): string {
   }).format(date);
 }
 
-export function buildTrackingUrl(slug: string, token: string): string {
-  const base = (process.env.PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
+export function buildTrackingUrl(slug: string, token: string, customBase?: string): string {
+  let base = customBase;
+  if (!base) {
+    if (process.env.PUBLIC_APP_URL && !process.env.PUBLIC_APP_URL.includes("localhost")) {
+      base = process.env.PUBLIC_APP_URL;
+    } else if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")) {
+      base = process.env.NEXT_PUBLIC_APP_URL;
+    } else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      base = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+    } else if (process.env.VERCEL_URL) {
+      base = `https://${process.env.VERCEL_URL}`;
+    } else if (typeof window !== "undefined" && window.location.origin) {
+      base = window.location.origin;
+    } else {
+      base = process.env.PUBLIC_APP_URL || "https://smart-buzzer-three.vercel.app";
+    }
+  }
+  base = base.replace(/\/+$/, "");
+  if (!base.startsWith("http://") && !base.startsWith("https://")) {
+    base = `https://${base}`;
+  }
   return `${base}/${slug}/track?order=${token}`;
 }
 
