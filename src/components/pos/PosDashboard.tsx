@@ -118,11 +118,12 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
   }, [branchId, load]);
 
   // ------------------------------------------------------------- actions
-  async function createOrder(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function createOrder(event?: React.FormEvent<HTMLFormElement>) {
+    if (event) event.preventDefault();
     setCreateError(null);
 
-    const orderNumber = Number(number);
+    // Auto-fallback to suggested number so cashier can click in 1 tap without typing!
+    const orderNumber = Number(number.trim() || suggested);
     if (!orderNumber || orderNumber < 1) {
       setCreateError(t["pos.needNumber"]);
       return;
@@ -157,6 +158,7 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
       }
 
       setIssued(payload.order);
+      setSuggested(payload.order.number + 1);
       setNumber("");
       setTableNumber("");
       setItemsNote("");
@@ -288,9 +290,14 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
         <form onSubmit={createOrder} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="sb-label" htmlFor="order-number">
-                {t["pos.orderNumber"]}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="sb-label" htmlFor="order-number">
+                  {t["pos.orderNumber"]}
+                </label>
+                <span className="text-[11px] font-bold text-cyan-400">
+                  {lang === "ar" ? "(تلقائي)" : "(Auto)"}
+                </span>
+              </div>
               <input
                 id="order-number"
                 ref={numberRef}
@@ -348,8 +355,19 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
             </p>
           ) : null}
 
-          <button type="submit" disabled={creating} className="sb-btn sb-btn-primary w-full">
-            {creating ? t["common.loading"] : t["pos.issueQr"]}
+          <button
+            type="submit"
+            disabled={creating}
+            className="sb-btn sb-btn-primary w-full !py-3.5 text-base font-black shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 cursor-pointer transition active:scale-[0.98]"
+          >
+            <span className="text-xl">⚡</span>
+            <span>
+              {creating
+                ? t["common.loading"]
+                : number.trim()
+                ? `إصدار رمز QR للطلب #${number}`
+                : `إصدار سريع برقم تلقائي — #${suggested}`}
+            </span>
           </button>
         </form>
       </section>
@@ -384,6 +402,16 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
             >
               ESC/POS
             </a>
+            <button
+              type="button"
+              onClick={() => {
+                setIssued(null);
+                numberRef.current?.focus();
+              }}
+              className="sb-btn sb-btn-warm !py-2 text-sm font-black"
+            >
+              {lang === "ar" ? "➕ طلب تالي" : "➕ Next Order"}
+            </button>
             <button
               type="button"
               onClick={() => setIssued(null)}
