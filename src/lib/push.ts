@@ -39,31 +39,39 @@ export async function sendOrderPushNotification(
     return { sent: 0, failed: 0 };
   }
 
-  let sent = 0;
-  let failed = 0;
-
   const notificationString = JSON.stringify(payload);
 
-  for (const sub of subscriptions) {
-    const pushSubscription = {
-      endpoint: sub.endpoint,
-      keys: {
-        p256dh: sub.p256dh,
-        auth: sub.auth,
-      },
-    };
+  const results = await Promise.allSettled(
+    subscriptions.map(async (sub) => {
+      const pushSubscription = {
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh,
+          auth: sub.auth,
+        },
+      };
 
-    try {
-      await webpush.sendNotification(pushSubscription, notificationString);
-      sent += 1;
-    } catch (err: unknown) {
-      failed += 1;
-      const statusCode = (err as { statusCode?: number })?.statusCode;
-      // 404 or 410 means subscription is expired or unsubscribed
-      if (statusCode === 404 || statusCode === 410) {
-        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+      try {
+        await webpush.sendNotification(pushSubscription, notificationString, {
+          urgency: "high", // Bypasses Android/iOS battery doze for instant wake-up
+          TTL: 120, // 2 minutes time to live (high priority buzzer)
+        });
+        return { ok: true };
+      } catch (err: unknown) {
+        const statusCode = (err as { statusCode?: number })?.statusCode;
+        if (statusCode === 404 || statusCode === 410) {
+          await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+        }
+        throw err;
       }
-    }
+    })
+  );
+
+  let sent = 0;
+  let failed = 0;
+  for (const r of results) {
+    if (r.status === "fulfilled") sent += 1;
+    else failed += 1;
   }
 
   return { sent, failed };

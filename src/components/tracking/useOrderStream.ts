@@ -79,32 +79,53 @@ export function useOrderStream(token: string, initial: PublicOrder): StreamState
     };
   }, [token]);
 
-  // Safety net: poll while the socket is down.
+  // Ultra-fast sync: Real-time SSE + 1.2s instant polling + visibilitychange wake-up
   useEffect(() => {
     if (!token) return;
 
-    const timer = setInterval(async () => {
-      if (connectedRef.current) return;
+    let active = true;
+
+    const fetchFresh = async () => {
       try {
         const response = await fetch(`/api/public/orders/${encodeURIComponent(token)}`, {
           cache: "no-store",
         });
-        if (!response.ok) return;
+        if (!response.ok || !active) return;
         const fresh = (await response.json()) as PublicOrder;
-        setOrder((previous) =>
-          previous.status === fresh.status &&
-          previous.rating?.stars === fresh.rating?.stars &&
-          previous.createdAt === fresh.createdAt
-            ? previous
-            : fresh,
-        );
+        setOrder((previous) => {
+          if (
+            previous.status === fresh.status &&
+            previous.rating?.stars === fresh.rating?.stars &&
+            previous.createdAt === fresh.createdAt
+          ) {
+            return previous;
+          }
+          return fresh;
+        });
         setLastEventAt(Date.now());
       } catch {
-        /* offline — retry on the next tick */
+        /* offline — retry on next tick */
       }
-    }, 8000);
+    };
 
-    return () => clearInterval(timer);
+    // Fast 1.2-second interval while preparing or ready for sub-second sync
+    const timer = setInterval(() => {
+      void fetchFresh();
+    }, 1200);
+
+    // Instant wake-up when user unlocks phone or switches back to browser tab
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void fetchFresh();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [token]);
 
   return { order, connected, lastEventAt };
