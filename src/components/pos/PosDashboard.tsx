@@ -152,13 +152,34 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
   }
 
   async function changeStatus(orderId: string, status: string) {
-    // Optimistic update so the button feels instant on a busy counter.
-    setQueue((previous) => ({
-      ...previous,
-      active: previous.active.map((order) =>
-        order.id === orderId ? { ...order, status: status as PosOrder["status"] } : order,
-      ),
-    }));
+    const isFinished = status === "COMPLETED" || status === "CANCELLED";
+
+    // Optimistic update: instantly remove finished orders from the active queue!
+    setQueue((previous) => {
+      const target = previous.active.find((order) => order.id === orderId);
+      if (!target) return previous;
+
+      const updated: PosOrder = {
+        ...target,
+        status: status as PosOrder["status"],
+        completedAt: status === "COMPLETED" ? new Date().toISOString() : target.completedAt,
+      };
+
+      if (isFinished) {
+        return {
+          ...previous,
+          active: previous.active.filter((order) => order.id !== orderId),
+          today: [updated, ...previous.today.filter((order) => order.id !== orderId)],
+        };
+      }
+
+      return {
+        ...previous,
+        active: previous.active.map((order) =>
+          order.id === orderId ? updated : order,
+        ),
+      };
+    });
 
     try {
       const response = await fetch(`/api/pos/orders/${orderId}/status`, {
