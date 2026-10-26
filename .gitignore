@@ -39,6 +39,7 @@ yarn-error.log*
 *.db-journal
 *.db-wal
 *.db-shm
+!prisma/seed.db
 
 # vercel
 .vercel
@@ -46,3 +47,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*
