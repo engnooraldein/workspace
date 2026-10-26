@@ -106,9 +106,10 @@ export default function PosDashboard({ slug, currency, lang, branches, initialBr
     source.addEventListener("order.status", () => void load());
     source.addEventListener("order.rebuzz", () => void load());
 
+    // Fast 2-second background sync so cashier sees customer phone connection instantly
     const poll = setInterval(() => {
-      if (!connected) void load();
-    }, 10000);
+      void load();
+    }, 2000);
 
     return () => {
       source.close();

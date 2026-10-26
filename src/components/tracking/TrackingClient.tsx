@@ -47,13 +47,16 @@ export default function TrackingClient({ initial, menu, promos, lang }: Props) {
     return () => clearInterval(timer);
   }, []);
 
-  // When order becomes ready, alert customer via lock-screen notification & buzzer
+  // When order becomes ready, alert customer via lock-screen notification & continuous buzzer
   useEffect(() => {
     if (order.status === "READY") {
       void push.notifyReady();
-      if (soundOn) buzzer.start();
+      buzzer.start();
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate([600, 200, 600, 200, 1000]);
+      }
     }
-  }, [order.status, push, soundOn, buzzer]);
+  }, [order.status, push, buzzer]);
 
   // When cashier clicks "Re-Buzz / رن مجدداً", re-trigger buzzer, phone vibration, and notification
   useEffect(() => {

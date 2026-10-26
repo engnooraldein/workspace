@@ -79,28 +79,35 @@ export function useOrderStream(token: string, initial: PublicOrder): StreamState
     };
   }, [token]);
 
-  // Ultra-fast sync: Real-time SSE + 1.2s instant polling + visibilitychange wake-up
+  // Ultra-fast sub-second sync: 800ms status check with cache-busting + visibilitychange wake-up
   useEffect(() => {
     if (!token) return;
 
     let active = true;
 
-    const fetchFresh = async () => {
+    const checkStatus = async () => {
       try {
-        const response = await fetch(`/api/public/orders/${encodeURIComponent(token)}`, {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/public/orders/${encodeURIComponent(token)}/status?_t=${Date.now()}`,
+          { cache: "no-store" }
+        );
         if (!response.ok || !active) return;
-        const fresh = (await response.json()) as PublicOrder;
+        const fresh = (await response.json()) as {
+          status: PublicOrder["status"];
+          readyAt: string | null;
+          completedAt: string | null;
+        };
+
         setOrder((previous) => {
-          if (
-            previous.status === fresh.status &&
-            previous.rating?.stars === fresh.rating?.stars &&
-            previous.createdAt === fresh.createdAt
-          ) {
+          if (previous.status === fresh.status) {
             return previous;
           }
-          return fresh;
+          return {
+            ...previous,
+            status: fresh.status,
+            readyAt: fresh.readyAt ?? previous.readyAt,
+            completedAt: fresh.completedAt ?? previous.completedAt,
+          };
         });
         setLastEventAt(Date.now());
       } catch {
@@ -108,15 +115,15 @@ export function useOrderStream(token: string, initial: PublicOrder): StreamState
       }
     };
 
-    // Fast 1.2-second interval while preparing or ready for sub-second sync
+    // Sub-second 800ms interval — guarantees instant status delivery without manual refresh!
     const timer = setInterval(() => {
-      void fetchFresh();
-    }, 1200);
+      void checkStatus();
+    }, 800);
 
     // Instant wake-up when user unlocks phone or switches back to browser tab
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        void fetchFresh();
+        void checkStatus();
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
