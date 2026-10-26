@@ -1,0 +1,330 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Smart Buzzer — design system
+   Identity taken from the project logo: neon cyan → amber on deep navy.
+   ========================================================================== */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--brand-primary);
+  --color-brand-2: var(--brand-secondary);
+  --color-brand-3: var(--brand-accent);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-app);
+}
+
+:root {
+  --background: #060b16;
+  --foreground: #e8eefc;
+  --surface: #0d1526;
+  --surface-2: #131d33;
+  --line: rgba(148, 178, 255, 0.14);
+  --muted: #93a4c8;
+
+  --brand-primary: #22d3ee;
+  --brand-secondary: #fbbf24;
+  --brand-accent: #38bdf8;
+
+  --font-app: "Segoe UI", "Noto Sans Arabic", "Dubai", Tahoma, "Helvetica Neue", Arial, system-ui,
+    sans-serif;
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-app);
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* Soft aurora backdrop used behind every screen. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -30% -10% auto -10%;
+  height: 70vh;
+  background:
+    radial-gradient(45% 55% at 20% 20%, color-mix(in srgb, var(--brand-primary) 22%, transparent) 0%, transparent 70%),
+    radial-gradient(40% 50% at 80% 10%, color-mix(in srgb, var(--brand-secondary) 16%, transparent) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#app-root {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------ cards */
+.sb-card {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-2) 92%, transparent) 0%,
+    color-mix(in srgb, var(--surface) 92%, transparent) 100%
+  );
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
+
+.sb-card-hover {
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.sb-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--brand-primary) 40%, var(--line));
+  box-shadow: 0 24px 50px -26px color-mix(in srgb, var(--brand-primary) 55%, transparent);
+}
+
+/* --------------------------------------------------------------- buttons */
+.sb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.9rem;
+  font-weight: 700;
+  padding: 0.7rem 1.15rem;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    background-color 120ms ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  line-height: 1.2;
+}
+.sb-btn:active {
+  transform: scale(0.97);
+}
+.sb-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sb-btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    color-mix(in srgb, var(--brand-primary) 55%, var(--brand-accent)) 100%
+  );
+  color: #04121a;
+  box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--brand-primary) 80%, transparent);
+}
+.sb-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.sb-btn-warm {
+  background: linear-gradient(135deg, var(--brand-secondary) 0%, #fb923c 100%);
+  color: #1c1203;
+  box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--brand-secondary) 75%, transparent);
+}
+.sb-btn-warm:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.sb-btn-ghost {
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  border-color: var(--line);
+  color: var(--foreground);
+}
+.sb-btn-ghost:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--brand-primary) 45%, var(--line));
+}
+
+.sb-btn-danger {
+  background: color-mix(in srgb, #ef4444 18%, transparent);
+  border-color: color-mix(in srgb, #ef4444 45%, transparent);
+  color: #fca5a5;
+}
+
+/* ---------------------------------------------------------------- inputs */
+.sb-input {
+  width: 100%;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.95rem;
+  color: var(--foreground);
+  outline: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.sb-input::placeholder {
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
+}
+.sb-input:focus {
+  border-color: color-mix(in srgb, var(--brand-primary) 60%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 16%, transparent);
+}
+.sb-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+/* ----------------------------------------------------------------- glows */
+.sb-glow-text {
+  background: linear-gradient(
+    100deg,
+    var(--brand-primary) 0%,
+    var(--brand-secondary) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.sb-ring-ready {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--brand-secondary) 55%, transparent),
+    0 0 44px -6px color-mix(in srgb, var(--brand-secondary) 65%, transparent);
+}
+
+/* Pulsing halo used for the "order is ready" state. */
+@keyframes sb-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-secondary) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 22px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+.sb-pulse {
+  animation: sb-pulse 1.8s cubic-bezier(0.66, 0, 0, 1) infinite;
+}
+
+@keyframes sb-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.sb-skeleton {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--surface-2) 80%, transparent) 25%,
+    color-mix(in srgb, var(--line) 55%, transparent) 37%,
+    color-mix(in srgb, var(--surface-2) 80%, transparent) 63%
+  );
+  background-size: 200% 100%;
+  animation: sb-shimmer 1.4s linear infinite;
+}
+
+/* ------------------------------------------------------- status timeline */
+.sb-step {
+  position: relative;
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+.sb-step-dot {
+  flex: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-2) 90%, transparent);
+  color: var(--muted);
+  transition: all 220ms ease;
+}
+.sb-step[data-state="done"] .sb-step-dot {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+  color: #04121a;
+  border-color: transparent;
+}
+.sb-step[data-state="active"] .sb-step-dot {
+  background: linear-gradient(135deg, var(--brand-secondary), #fb923c);
+  color: #1c1203;
+  border-color: transparent;
+}
+.sb-step[data-state="active"] .sb-step-dot {
+  animation: sb-pulse 1.8s cubic-bezier(0.66, 0, 0, transparent) infinite;
+}
+.sb-step-line {
+  position: absolute;
+  inset-inline-start: 1.05rem;
+  top: 2.1rem;
+  bottom: -0.85rem;
+  width: 2px;
+  background: var(--line);
+}
+.sb-step[data-state="done"] .sb-step-line {
+  background: linear-gradient(180deg, var(--brand-primary), transparent);
+}
+
+/* --------------------------------------------------------------- utility */
+.sb-scroll-x {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.sb-scroll-x::-webkit-scrollbar {
+  height: 6px;
+}
+.sb-scroll-x::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 9999px;
+}
+
+.sb-fade-up {
+  animation: sb-fade-up 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes sb-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media print {
+  body::before {
+    display: none;
+  }
+  .sb-no-print {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

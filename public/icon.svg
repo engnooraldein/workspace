@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0e172a" />
+      <stop offset="100%" stop-color="#060b16" />
+    </radialGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <rect width="504" height="504" x="4" y="4" rx="108" stroke="rgba(56,189,248,0.25)" stroke-width="4" />
+
+  <!-- Outer Radio Wave / Signal -->
+  <path d="M120 180 A160 160 0 0 1 392 180" stroke="url(#cyanGrad)" stroke-width="20" stroke-linecap="round" opacity="0.6" />
+  <path d="M165 215 A110 110 0 0 1 347 215" stroke="url(#cyanGrad)" stroke-width="22" stroke-linecap="round" />
+
+  <!-- Central Buzzer Bell / Device -->
+  <g filter="url(#glow)">
+    <path d="M256 180 C205 180 185 240 180 320 L332 320 C327 240 307 180 256 180 Z" fill="url(#cyanGrad)" />
+    <path d="M160 320 H352 C358 320 364 326 364 334 C364 346 352 356 340 356 H172 C160 356 148 346 148 334 C148 326 154 320 160 320 Z" fill="url(#amberGrad)" />
+    <!-- Clapper / Sound Pulse -->
+    <circle cx="256" cy="388" r="24" fill="url(#amberGrad)" />
+  </g>
+</svg>

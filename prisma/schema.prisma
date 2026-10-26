@@ -1,0 +1,227 @@
+// ============================================================================
+//  Smart Buzzer & Order Tracking Platform — Prisma schema
+//  Multi-tenant SaaS for restaurants & cafes in Iraq.
+//
+//  DEV  : provider = "sqlite"   (DATABASE_URL="file:./dev.db")
+//  PROD : provider = "postgresql"
+//         1. change `provider` below to "postgresql"
+//         2. set DATABASE_URL="postgresql://user:pass@host:5432/db?schema=public"
+//         3. npx prisma migrate deploy
+//         4. npx prisma generate
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Tenant = Restaurant / Cafe
+// ---------------------------------------------------------------------------
+model Tenant {
+  id           String  @id @default(cuid())
+  slug         String  @unique
+  name         String
+  nameEn       String?
+  tagline      String?
+  taglineEn    String?
+  logoBytes    Bytes?
+  logoMime     String?
+  primaryColor String  @default("#06b6d4")
+  secondaryColor String @default("#f59e0b")
+  accentColor  String  @default("#0ea5e9")
+  currency     String  @default("IQD")
+  phone        String?
+  whatsapp     String?
+  address      String?
+  instagram    String?
+  facebook     String?
+  tiktok       String?
+
+  // Subscription control (super admin can freeze/unfreeze a tenant)
+  plan               String    @default("trial")
+  subscriptionStatus String    @default("active") // active | frozen
+  subscriptionEndsAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches       Branch[]
+  users          User[]
+  orders         Order[]
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
+  promos         Promo[]
+}
+
+// ---------------------------------------------------------------------------
+// Branch = physical location of a restaurant
+// ---------------------------------------------------------------------------
+model Branch {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String
+  nameEn   String?
+  isActive Boolean @default(true)
+
+  users  User[]
+  orders Order[]
+
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+model User {
+  id           String  @id @default(cuid())
+  tenantId     String?
+  tenant       Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId     String?
+  branch       Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  name         String
+  email        String  @unique
+  passwordHash String
+  role         String  @default("CASHIER") // SUPER_ADMIN | OWNER | MANAGER | CASHIER | KITCHEN
+  isActive     Boolean @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([branchId])
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+model Order {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  number      Int
+  businessDate String // YYYY-MM-DD, keeps daily numbering unique
+  publicToken String   @unique // unguessable token used in the QR tracking URL
+  status      String   @default("PREPARING") // PREPARING | READY | COMPLETED | CANCELLED
+  tableNumber String?
+  itemsNote   String?
+  totalAmount Int      @default(0) // Iraqi Dinar, whole units (no fils in practice)
+  createdAt   DateTime @default(now())
+  readyAt     DateTime?
+  completedAt DateTime?
+  updatedAt   DateTime @updatedAt
+
+  rating Rating?
+  events OrderEvent[]
+  pushSubscriptions PushSubscription[]
+
+  @@unique([branchId, businessDate, number])
+  @@index([tenantId, status])
+  @@index([branchId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Order event log (audit trail + realtime replay source)
+// ---------------------------------------------------------------------------
+model OrderEvent {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type       String // CREATED | STATUS_CHANGED | RATED
+  fromStatus String?
+  toStatus   String?
+  payload    String?
+  createdAt  DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// ---------------------------------------------------------------------------
+// Digital menu
+// ---------------------------------------------------------------------------
+model MenuCategory {
+  id        String  @id @default(cuid())
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  nameEn    String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  items MenuItem[]
+
+  @@index([tenantId])
+}
+
+model MenuItem {
+  id            String  @id @default(cuid())
+  tenantId      String
+  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categoryId    String?
+  category      MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  name          String
+  nameEn        String?
+  description   String?
+  descriptionEn String?
+  price         Int     @default(0)
+  imageUrl      String?
+  isAvailable   Boolean @default(true) // temporarily out of stock
+  sortOrder     Int     @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([categoryId])
+}
+
+// ---------------------------------------------------------------------------
+// Promotional banners shown on the customer tracking screen
+// ---------------------------------------------------------------------------
+model Promo {
+  id        String  @id @default(cuid())
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title     String
+  titleEn   String?
+  body      String?
+  bodyEn    String?
+  imageUrl  String?
+  linkUrl   String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------------------
+// Customer rating (5 stars + optional note)
+// ---------------------------------------------------------------------------
+model Rating {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stars     Int
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Web Push subscriptions for lock-screen alerts
+// ---------------------------------------------------------------------------
+model PushSubscription {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
